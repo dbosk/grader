@@ -1,3 +1,10 @@
+Dockerfile
+bashrc
+config
+grader.pdf
+grader.tex
+ltxobj/
+
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
