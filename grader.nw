@@ -1,4 +1,26 @@
-\section{Basic usage}
+\section{Introduction}
+
+We want to set up a Docker container to run all grading and reporting in it.
+The advantage is that we always run in a working environment with all 
+dependencies up-to-date to our specific tools for the task.
+
+The document is organized as follows.
+
+Section \ref{BasicUsage} covers the basic usage of the Docker container:
+What do we need to provide for it to work.
+And how do we use it as an interactive shell.
+
+Section \ref{DetailedUsage} covers how to use the container in a 
+non-interactive way, that is, using it for automation.
+
+Section \ref{CronJob} generalizes the contents from Section \ref{DetailedUsage} 
+into a reusable script that can be run as a cron job.
+
+Sections \ref{Implementation} and forward covers the construction of the Docker 
+image itself.
+
+
+\section{Basic usage}\label{BasicUsage}
 
 We need to set use the following setup for the Docker container to work.
 We need the following environment variables:
@@ -43,7 +65,7 @@ docker run \
 We note that the image is available from Docker Hub as [[dbosk/grader]].
 
 
-\section{Detailed usage}
+\section{Detailed usage}\label{DetailedUsage}
 
 Now, one purpose of the [[grader]] Docker image is to run grading scripts 
 easily with the latest versions of [[canvaslms]], [[ladok]] and [[repobee]] 
