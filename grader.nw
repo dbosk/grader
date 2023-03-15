@@ -1,0 +1,395 @@
+\section{Introduction}
+
+We want to set up a Docker container to run all grading and reporting in it.
+The advantage is that we always run in a working environment with all 
+dependencies up-to-date to our specific tools for the task.
+
+The document is organized as follows.
+
+Section \ref{BasicUsage} covers the basic usage of the Docker container:
+What do we need to provide for it to work.
+And how do we use it as an interactive shell.
+
+Section \ref{DetailedUsage} covers how to use the container in a 
+non-interactive way, that is, using it for automation.
+
+Section \ref{CronJob} generalizes the contents from Section \ref{DetailedUsage} 
+into a reusable script that can be run as a cron job.
+
+Sections \ref{Implementation} and onwards covers the construction of the Docker 
+image itself.
+
+
+\section{Basic usage}\label{BasicUsage}
+
+We need to set use the following setup for the Docker container to work.
+We need the following environment variables:
+\begin{itemize}
+\item [[KRB_USER]] and [[KRB_PASS]] containing the Kerberos username (including 
+@realm) and password for the user to access the SSH servers.
+\item [[CANVAS_SERVER]] and [[CANVAS_TOKEN]] to authenticate the [[canvaslms]] 
+command.
+See [[canvaslms login -h]].
+\item [[LADOK_USER]] and [[LADOK_PASS]] containing the LADOK username and 
+password to use.
+See [[ladok login -h]].
+\item [[REPOBEE_USER]], [[REPOBEE_URL]], [[REPOBEE_TOKEN]] as configuration for 
+RepoBee.
+See the RepoBee documentation for details:
+\begin{center}
+\texttt{https://docs.repobee.org/en/stable/getting\textunderscore{}started.html}.
+\end{center}
+\item [[COURSE_CODE]] containing a space-separated list of regular expressions 
+for the course code, [[COURSE_CODE_ORG]] containing a space-separated list of 
+  course code and GitHub organization name pairs.
+\end{itemize}
+We also must mount the AFS root (/afs) in the container (to access 
+/afs/kth.se).
+However, due to how the container is run by Docker, it doesn't get write access 
+through the user's Kerberos credentials.
+
+So if we have set those environment variables and have AFS mounted in /afs, 
+then we can run this image as follows:
+\begin{verbatim}
+docker run \
+  -e KRB_USER -e KRB_PASS \
+  -e CANVAS_SERVER -e CANVAS_TOKEN \
+  -e LADOK_USER -e LADOK_PASS \
+  -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
+  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -v /afs:/afs \
+  -it \
+    dbosk/grader:latest
+\end{verbatim}
+
+We note that the image is available from Docker Hub as [[dbosk/grader]].
+
+
+\section{Detailed usage}\label{DetailedUsage}
+
+Now, one purpose of the [[grader]] Docker image is to run grading scripts 
+easily with the latest versions of [[canvaslms]], [[ladok]] and [[repobee]] 
+commands.
+In addition to running it in interactive mode (using [[-it]] arguments) as 
+above, we have two more options:
+\begin{enumerate}
+\item\label{NewContainer}
+  create a new Docker image using [[grader]] as base, or
+\item\label{ExtDir}
+  have scripts outside the container and run them inside.
+\end{enumerate}
+
+Say we want to run the following script:
+<<ladok.sh>>=
+#!/bin/bash
+
+source /grader/credentials
+
+courses="(prg[mi]|datintro)2[1-9]"
+components="(LAB[13]|MAT1|KAL1)"
+
+canvaslms results -c "$courses" -A "$components" | \
+  sed -E "s/ ?[HV]T[0-9]{2}( \(.*\))?//" | \
+  ladok report -fv
+
+datorprov_courses="(prg[mi])2[2-9]"
+
+canvaslms results -c "$datorprov_courses" -A "LAB2" \
+  -S canvaslms.grades.maxgradesurvey | \
+    sed -E "s/ ?[HV]T[0-9]{2}( \(.*\))?//" | \
+    ladok report -fv
+@
+
+For option \ref{ExtDir}, we could put [[<<ladok.sh>>]] and [[credentials]] in a 
+directory, say [[~/ladok]].
+Then we mount that directory in the container when we run it, and run the 
+script in that mounted directory.
+\begin{verbatim}
+docker run \
+  -e KRB_USER -e KRB_PASS \
+  -e CANVAS_SERVER -e CANVAS_TOKEN \
+  -e LADOK_USER -e LADOK_PASS \
+  -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
+  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -v /afs:/afs \
+  -v ~/ladok:/grader \
+    dbosk/grader:latest /bin/bash /grader/ladok.sh
+\end{verbatim}
+
+Option \ref{NewContainer} above, is very similar to the [[<<Dockerfile>>]] 
+documented below.
+Building it is essentially also the same.
+The essential difference is the root image used:
+<<Dockerfile.ladok>>=
+FROM dbosk/grader
+
+COPY ladok.sh credentials /grader
+
+CMD ["/bin/bash", "/grader/ladok.sh"]
+@
+
+
+\section{A suitable cron job}\label{CronJob}
+
+Now, let's generalize what we did for option \ref{ExtDir} above.
+We want to write a short script, [[<<grader.sh>>]]\footnote{%
+  Note that the [[<<Makefile>>]] constructed later allows us to build this 
+  script by running [[make grader.sh]].
+}, that can be added to our cron tab.
+The idea is to have a directory full of scripts that can be executed by this 
+script.
+<<grader.sh>>=
+#!/bin/bash
+
+<<config variables>>
+
+<<update the grader image>>
+
+<<change CWD to script directory>>
+<<find all executable scripts>>
+<<run each script in the grader container>>
+@
+
+Now, the Docker image provided here, is also available on Docker Hub.
+We can simply pull a ready-made image.
+We let the user override the Docker Hub repo, in case they want to customized 
+their own image.
+<<update the grader image>>=
+docker pull ${GRADER_DH_REPO}:latest
+<<config variables>>=
+GRADER_DH_REPO="dbosk/grader"
+@
+
+We change the working directory to the script directory, this way we don't need 
+to take that into consideration in the remaining code.
+<<change CWD to script directory>>=
+cd ${SCRIPT_DIR}
+<<config variables>>=
+SCRIPT_DIR="."
+@
+
+Now, we will run all scripts that have the executable bit set.
+All other files are ignored.
+We also ignore files in any subdirectories.
+(Note that this should be [[-maxdepth 1]] and it should come before any other 
+arguments.)
+This way we can have include files without the executable bit set.
+<<find all executable scripts>>=
+scripts=$(find . -maxdepth 1 -type f -executable)
+<<run each script in the grader container>>=
+for script in ${scripts}; do
+  <<run script in grader container>>
+done
+@
+
+Worth noting here that we use [[$(pwd)]] instead of [[.]].
+This is because Docker requires at least two characters, so we give the 
+absolute path instead of the relative one.
+<<run script in grader container>>=
+docker run \
+  -e KRB_USER -e KRB_PASS \
+  -e CANVAS_SERVER -e CANVAS_TOKEN \
+  -e LADOK_USER -e LADOK_PASS \
+  -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
+  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -v /afs:/afs \
+  -v "$(pwd)":/grader \
+    ${GRADER_DH_REPO}:latest /bin/bash "${script}"
+@
+
+
+\section{[[grader]] image implementation overview}\label{Implementation}
+
+We want to build a Docker image to run all the necessary grading in the course.
+We use RepoBee to work with the students' repos.
+However, we can't base our work on that image since it uses Alpine, which 
+doesn't provide an SSH version that can handle Kerberos.
+We need Kerberos to authenticate to KTH.
+Then we install the depends and grading scripts and run them all by default.
+<<Dockerfile>>=
+FROM ubuntu
+
+USER root
+WORKDIR grader
+
+<<set up canvaslms and ladok3 in container>>
+<<set up repobee in container>>
+<<set up SSH in container>>
+
+CMD ["/bin/bash"]
+@
+
+Next is building the Docker image, we use GNU Make for this.
+We use the phony target [[${IMAGE_TARGET}]].
+This variable should be updated whenever we change the assignments, so that the 
+grading procedure can vary between courses.
+<<targets for docker image>>=
+IMAGE_TARGET=   grader
+
+.PHONY: all
+all: ${IMAGE_TARGET}
+
+.PHONY: ${IMAGE_TARGET}
+${IMAGE_TARGET}: Dockerfile
+	docker build -t $@ .
+
+Dockerfile: grader.nw
+	${NOTANGLE}
+
+.PHONY: clean clean-docker
+clean: clean-docker
+clean-docker:
+	${RM} Dockerfile
+
+.PHONY: distclean distclean-docker
+distclean: distclean-docker
+distclean-docker:
+	-docker image rm -f ${IMAGE_TARGET}
+
+<<publish target to push image to Docker Hub>>
+<<build targets for files for image>>
+<<clean targets>>
+@
+
+We use a [[<<Makefile>>]] to build this documentation and the Docker image (as 
+already outlined above).
+We use the makefiles framework\footnote{%
+  URL: \texttt{https://github.com/dbosk/makefiles}.
+}.
+
+We want to specify [[grader.tex]] as intermediate so that we build the 
+documentation PDF directly, so that NOWEB will provide the preamble.
+If [[grader.tex]] exists, Make will try to make the PDF from the TeX file, not 
+from the NOWEB file directly.
+<<Makefile>>=
+.PHONY: all
+all: grader.pdf
+
+.INTERMEDIATE: grader.tex
+grader.pdf: grader.nw
+	${NOWEAVE.pdf}
+
+<<targets for docker image>>
+
+.PHONY: clean
+clean:
+	${RM} grader.tex grader.mk
+	${RM} grader.aux
+	${RM} grader.fdb_latexmk
+	${RM} grader.fls
+	${RM} grader.log
+	${RM} grader.pdf
+
+INCLUDE_MAKEFILES=./makefiles
+include ${INCLUDE_MAKEFILES}/noweb.mk
+@
+
+
+\section{Push image to Docker Hub}
+
+We want to publish a ready-made image on Docker Hub to make updates easier.
+This way, once a new image is pushed, all systems using it would just need to 
+pull instead of building a new image on their own.
+<<publish target to push image to Docker Hub>>=
+.PHONY: publish
+publish: ${IMAGE_TARGET}
+	docker tag ${IMAGE_TARGET}:latest dbosk/grader:latest
+	docker push dbosk/grader:latest
+@
+
+
+\section{Set up \texttt{canvaslms} and \texttt{ladok3}}
+
+We need the [[canvaslms]] command inside the container since the scripts rely 
+heavily on this.
+So we install it using [[pip]].
+Now, since it depends on the [[cryptography]] package, we need to install the 
+dependencies\footnote{%
+  See \texttt{https://stackoverflow.com/a/53562393/1305099}.
+}.
+We also want to install the [[ladok]] command to report whenever we have any 
+passing results.
+<<set up canvaslms and ladok3 in container>>=
+RUN apt-get update && \
+  apt-get install -y \
+    build-essential \
+    libffi-dev musl-dev \
+    python3-pip && \
+  python3 -m pip install --no-cache-dir canvaslms ladok3 && \
+  apt-get purge -y build-essential \
+    libffi-dev musl-dev && \
+  apt-get autoremove -y
+@
+
+
+\section{Set up \texttt{repobee}}
+
+We also want RepoBee in the container.
+So we run their install script to install it rather than using their Docker 
+image.
+Their Docker image is based on Alpine, which doesn't have SSH that supports 
+Kerberos.
+
+We note that we update the [[PATH]] environment variable before the 
+installation.
+The RepoBee installer checks for [[repobee]] being on the [[PATH]] and asks us 
+if we want to add it if it's not already there.
+This, of course, breaks the image creation.
+<<set up repobee in container>>=
+ENV PATH "$PATH:/root/.repobee/bin"
+RUN apt-get update && apt-get install -y curl git python3-venv && \
+  curl -s https://repobee.org/install.sh > repobee-install.sh && \
+  bash repobee-install.sh && rm repobee-install.sh
+@
+
+
+\section{Set up SSH}
+
+We need to have SSH inside the container.
+Since we want to interact with KTH systems, we also need Kerberos.
+Then we want to have server specific configuration (the [[config]] file).
+<<set up SSH in container>>=
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive TZ=Europe/Stockholm apt-get install -y \
+    openssh-client heimdal-clients
+COPY config /root/.ssh/
+RUN chmod -R 0600 /root/.ssh
+@
+
+To do this we need the [[Makefile]] to build the [[config]] file.
+We start from the local config, which should probably be edited.
+<<build targets for files for image>>=
+config: ${HOME}/.ssh/config
+	${CP} $^ $@
+	${EDITOR} $@
+
+${IMAGE_TARGET}: config
+<<clean targets>>=
+.PHONY: clean-ssh
+clean: clean-ssh
+
+clean-ssh:
+	${RM} config
+@
+
+To set up the Kerberos authentication, we simply take the credentials from the 
+environment.
+<<initialize SSH authentication for run>>=
+krb_pass_file=$(mktemp)
+
+echo $KRB_PASS > $krb_pass_file
+kinit -f --password-file=$krb_pass_file $KRB_USER
+
+rm $krb_pass_file
+@
+
+Now, we'd like to do this authentication automatically when starting bash.
+<<set up SSH in container>>=
+COPY bashrc /root/.bashrc
+<<build targets for files for image>>=
+${IMAGE_TARGET}: bashrc
+bashrc: grader.nw
+	${NOTANGLE.sh}
+<<bashrc>>=
+<<initialize SSH authentication for run>>
+
