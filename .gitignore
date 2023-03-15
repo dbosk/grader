@@ -4,6 +4,7 @@ config
 grader.pdf
 grader.tex
 ltxobj/
+grader.sh
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
