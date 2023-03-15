@@ -171,13 +171,20 @@ SCRIPT_DIR="."
 Now, we will run all scripts that have the executable bit set.
 All other files are ignored.
 We also ignore files in any subdirectories.
+(Note that this should be [[-maxdepth 1]] and it should come before any other 
+arguments.)
 This way we can have include files without the executable bit set.
 <<find all executable scripts>>=
-scripts=$(find . -type -f -executable -maxdepth 0)
+scripts=$(find . -maxdepth 1 -type f -executable)
 <<run each script in the grader container>>=
 for script in ${scripts}; do
   <<run script in grader container>>
 done
+@
+
+Worth noting here that we use [[$(pwd)]] instead of [[.]].
+This is because Docker requires at least two characters, so we give the 
+absolute path instead of the relative one.
 <<run script in grader container>>=
 docker run \
   -e KRB_USER -e KRB_PASS \
@@ -186,7 +193,7 @@ docker run \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
   -e COURSE_CODE -e COURSE_CODE_ORG \
   -v /afs:/afs \
-  -v .:/grader \
+  -v "$(pwd)":/grader \
     ${GRADER_DH_REPO}:latest /bin/bash "${script}"
 @
 
