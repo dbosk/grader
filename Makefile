@@ -27,6 +27,10 @@ distclean: distclean-docker
 distclean-docker:
 	-docker image rm -f ${IMAGE_TARGET}
 
+.PHONY: publish
+publish: ${IMAGE_TARGET}
+	docker tag ${IMAGE_TARGET}:latest dbosk/grader:latest
+	docker push dbosk/grader:latest
 config: ${HOME}/.ssh/config
 	${CP} $^ $@
 	${EDITOR} $@

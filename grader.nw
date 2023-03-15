@@ -202,8 +202,8 @@ pull instead of building a new image on their own.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
 publish: ${IMAGE_TARGET}
-  docker tag ${IMAGE_TARGET}:latest dbosk/grader:latest
-  docker push dbosk/grader:latest
+	docker tag ${IMAGE_TARGET}:latest dbosk/grader:latest
+	docker push dbosk/grader:latest
 @
 
 
