@@ -61,11 +61,11 @@ WORKDIR grader
 CMD ["/bin/bash"]
 @
 
-Next is building the Docker image.
-We use the phony target [[${IMAGE_TARGET}]] for this.
+Next is building the Docker image, we use GNU Make for this.
+We use the phony target [[${IMAGE_TARGET}]].
 This variable should be updated whenever we change the assignments, so that the 
 grading procedure can vary between courses.
-<<grader.mk>>=
+<<targets for docker image>>=
 IMAGE_TARGET=   grader
 
 .PHONY: all
@@ -90,6 +90,39 @@ distclean-docker:
 
 <<build targets for files for image>>
 <<clean targets>>
+@
+
+We use a [[<<Makefile>>]] to build this documentation and the Docker image (as 
+already outlined above).
+We use the makefiles framework\footnote{%
+  URL: \texttt{https://github.com/dbosk/makefiles}.
+}.
+
+We want to specify [[grader.tex]] as intermediate so that we build the 
+documentation PDF directly, so that NOWEB will provide the preamble.
+If [[grader.tex]] exists, Make will try to make the PDF from the TeX file, not 
+from the NOWEB file directly.
+<<Makefile>>=
+.PHONY: all
+all: grader.pdf
+
+.INTERMEDIATE: grader.tex
+grader.pdf: grader.nw
+	${NOWEAVE.pdf}
+
+<<targets for docker image>>
+
+.PHONY: clean
+clean:
+	${RM} grader.tex grader.mk
+	${RM} grader.aux
+	${RM} grader.fdb_latexmk
+	${RM} grader.fls
+	${RM} grader.log
+	${RM} grader.pdf
+
+INCLUDE_MAKEFILES=./makefiles
+include ${INCLUDE_MAKEFILES}/noweb.mk
 @
 
 
