@@ -107,7 +107,69 @@ CMD ["/bin/bash", "/grader/ladok.sh"]
 @
 
 
-\section{[[grader]] image implementation overview}
+\section{A suitable cron job}\label{CronJob}
+
+Now, let's generalize what we did for option \ref{ExtDir} above.
+We want to write a short script, [[<<grader.sh>>]]\footnote{%
+  Note that the [[<<Makefile>>]] constructed later allows us to build this 
+  script by running [[make grader.sh]].
+}, that can be added to our cron tab.
+The idea is to have a directory full of scripts that can be executed by this 
+script.
+<<grader.sh>>=
+#!/bin/bash
+
+<<config variables>>
+
+<<update the grader image>>
+
+<<change CWD to script directory>>
+<<find all executable scripts>>
+<<run each script in the grader container>>
+@
+
+Now, the Docker image provided here, is also available on Docker Hub.
+We can simply pull a ready-made image.
+We let the user override the Docker Hub repo, in case they want to customized 
+their own image.
+<<update the grader image>>=
+docker pull ${GRADER_DH_REPO}:latest
+<<config variables>>=
+GRADER_DH_REPO="dbosk/grader"
+@
+
+We change the working directory to the script directory, this way we don't need 
+to take that into consideration in the remaining code.
+<<change CWD to script directory>>=
+cd ${SCRIPT_DIR}
+<<config variables>>=
+SCRIPT_DIR="."
+@
+
+Now, we will run all scripts that have the executable bit set.
+All other files are ignored.
+We also ignore files in any subdirectories.
+This way we can have include files without the executable bit set.
+<<find all executable scripts>>=
+scripts=$(find . -type -f -executable -maxdepth 0)
+<<run each script in the grader container>>=
+for script in ${scripts}; do
+  <<run script in grader container>>
+done
+<<run script in grader container>>=
+docker run \
+  -e KRB_USER -e KRB_PASS \
+  -e CANVAS_SERVER -e CANVAS_TOKEN \
+  -e LADOK_USER -e LADOK_PASS \
+  -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
+  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -v /afs:/afs \
+  -v .:/grader \
+    ${GRADER_DH_REPO}:latest /bin/bash "${script}"
+@
+
+
+\section{[[grader]] image implementation overview}\label{Implementation}
 
 We want to build a Docker image to run all the necessary grading in the course.
 We use RepoBee to work with the students' repos.
