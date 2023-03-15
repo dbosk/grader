@@ -16,7 +16,7 @@ non-interactive way, that is, using it for automation.
 Section \ref{CronJob} generalizes the contents from Section \ref{DetailedUsage} 
 into a reusable script that can be run as a cron job.
 
-Sections \ref{Implementation} and forward covers the construction of the Docker 
+Sections \ref{Implementation} and onwards covers the construction of the Docker 
 image itself.
 
 
