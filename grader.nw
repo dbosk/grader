@@ -20,6 +20,35 @@ Sections \ref{Implementation} and onwards covers the construction of the Docker
 image itself.
 
 
+\section{Building}
+
+We use a [[<<Makefile>>]] to build this documentation and all files herein.
+This means that one can simply run [[make filename]] to extract the file one is 
+interested in.
+
+We use the makefiles framework\footnote{%
+  URL: \texttt{https://github.com/dbosk/makefiles}.
+}.
+This means that we get many extra default pattern rules.
+<<Makefile>>=
+.PHONY: all
+all: grader.pdf
+
+<<targets>>
+
+<<targets for docker image>>
+
+.PHONY: clean
+clean:
+
+.PHONY: distclean
+distclean:
+
+INCLUDE_MAKEFILES=./makefiles
+include ${INCLUDE_MAKEFILES}/noweb.mk
+@
+
+
 \section{Basic usage}\label{BasicUsage}
 
 We need to set use the following setup for the Docker container to work.
@@ -128,6 +157,19 @@ COPY ladok.sh credentials /grader
 CMD ["/bin/bash", "/grader/ladok.sh"]
 @
 
+Finally, let's add the targets to the Makefile to build these.
+We need to specify these explicitly, since the pattern rules only match files 
+with the same stem.
+<<targets>>=
+ladok.sh Dockerfile.ladok: grader.nw
+	${NOTANGLE}
+
+.PHONY: clean-detailed-examples
+clean: clean-detailed-examples
+clean-detailed-examples:
+	${RM} ladok.sh Dockerfile.ladok
+@
+
 
 \section{A suitable cron job}\label{CronJob}
 
@@ -148,6 +190,17 @@ script.
 <<change CWD to script directory>>
 <<find all executable scripts>>
 <<run each script in the grader container>>
+@
+
+Let's also add the building targets.
+We don't need to specify any recipe as the pattern rules will solve it.
+<<targets>>=
+grader.sh: grader.nw
+
+.PHONY: clean-grader-script
+clean: clean-grader-script
+clean-grader-script:
+	${RM} grader.sh
 @
 
 Now, the Docker image provided here, is also available on Docker Hub.
@@ -198,6 +251,38 @@ docker run \
 @
 
 
+\section{Building the documentation}
+
+The default building of the documentation will not work since we don't have any 
+preamble in this code.
+So we want to use the alternative building method ([[NOWEAVE.pdf]] instead of 
+[[NOWEAVE.tex]]).
+
+Consequently, we want to specify [[grader.tex]] as intermediate so that we 
+build the documentation PDF directly, so that NOWEB will provide the preamble.
+If [[grader.tex]] exists, Make will try to make the PDF from the TeX file, not 
+from the NOWEB file directly.
+<<targets>>=
+.INTERMEDIATE: grader.tex
+grader.pdf: grader.nw
+	${NOWEAVE.pdf}
+@
+
+We also want to remove all the output files from LaTeX when we target clean.
+We simply ``hook'' this cleaning target to the [[clean]] target.
+<<targets>>=
+.PHONY: clean-pdf
+clean: clean-pdf
+clean-pdf:
+	${RM} grader.tex grader.mk
+	${RM} grader.aux
+	${RM} grader.fdb_latexmk
+	${RM} grader.fls
+	${RM} grader.log
+	${RM} grader.pdf
+@
+
+
 \section{[[grader]] image implementation overview}\label{Implementation}
 
 We want to build a Docker image to run all the necessary grading in the course.
@@ -219,20 +304,8 @@ WORKDIR grader
 CMD ["/bin/bash"]
 @
 
-Next is building the Docker image, we use GNU Make for this.
-We use the phony target [[${IMAGE_TARGET}]].
-This variable should be updated whenever we change the assignments, so that the 
-grading procedure can vary between courses.
-<<targets for docker image>>=
-IMAGE_TARGET=   grader
-
-.PHONY: all
-all: ${IMAGE_TARGET}
-
-.PHONY: ${IMAGE_TARGET}
-${IMAGE_TARGET}: Dockerfile
-	docker build -t $@ .
-
+Now, we build this file as follows.
+<<targets>>=
 Dockerfile: grader.nw
 	${NOTANGLE}
 
@@ -240,48 +313,110 @@ Dockerfile: grader.nw
 clean: clean-docker
 clean-docker:
 	${RM} Dockerfile
+@
+
+Next is building the Docker image, we use GNU Make for this.
+We use the phony target [[${IMAGE_TARGET}]].
+This variable should be updated whenever we change the assignments, so that the 
+grading procedure can vary between courses.
+<<targets for docker image>>=
+IMAGE_TARGET=   dbosk/grader
+IMAGE_TAG=      $(shell date +%Y%m%d-%H%m)
+
+.PHONY: all
+all: ${IMAGE_TARGET}
+
+.PHONY: ${IMAGE_TARGET}
+${IMAGE_TARGET}: Dockerfile
+	<<run docker to build the image>>
 
 .PHONY: distclean distclean-docker
 distclean: distclean-docker
 distclean-docker:
-	-docker image rm -f ${IMAGE_TARGET}
+	<<clean docker images>>
 
 <<publish target to push image to Docker Hub>>
 <<build targets for files for image>>
 <<clean targets>>
 @
 
-We use a [[<<Makefile>>]] to build this documentation and the Docker image (as 
-already outlined above).
-We use the makefiles framework\footnote{%
-  URL: \texttt{https://github.com/dbosk/makefiles}.
+
+\section{Building a multi-platform image}
+
+We want to be able to use this image on both amd64 (laptop, server etc.) and 
+arm64 (Raspberry Pi).
+This means that we must build the image for those two platforms, otherwise the 
+image will be usable only on the platform on which it was built.
+
+To build multi-platform images, we need to use [[docker buildx]] instead of 
+[[docker build]].
+This also means that we need something better than the [[docker.io]] package on 
+Ubuntu.
+We also need the binary formats (binfmt) of the target platforms.
+To make life easy for anyone who wants to build multi-platform images, we will 
+add a target that performs the required setup.
+<<targets for docker image>>=
+.PHONY: multiplatform-setup
+multiplatform-setup:
+	<<install docker-ce from Docker's Ubuntu repo>>
+	<<set up the binfmt>>
+	<<add multiplatform builder>>
+@
+
+We need Docker Desktop or Docker CE.
+We can get this from Docker's own Ubuntu repos\footnote{%
+  See Docker's official documentation for details:
+  \texttt{https://docs.docker.com/engine/install/ubuntu/\#set-up-the-repository}.
 }.
+At the time of writing, adding those and installing Docker could be done along 
+the following lines.
+<<install docker-ce from Docker's Ubuntu repo>>=
+sudo mkdir -m 0755 -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+(echo -n "deb [arch=$(dpkg --print-architecture)"; \
+ echo -n " signed-by=/etc/apt/keyrings/ docker.gpg]"; \
+ echo -n " https://download.docker.com/linux/ubuntu"; \
+ echo    " $(lsb_release -cs) stable") \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev /null
+sudo apt update
+sudo apt install docker-ce
+@
 
-We want to specify [[grader.tex]] as intermediate so that we build the 
-documentation PDF directly, so that NOWEB will provide the preamble.
-If [[grader.tex]] exists, Make will try to make the PDF from the TeX file, not 
-from the NOWEB file directly.
-<<Makefile>>=
-.PHONY: all
-all: grader.pdf
+Now we should have [[docker buildx]].
+However, we need the binary formats (binfmt) for the other platforms to be able 
+to build multi-platform images, so we must install them.
+The following answer on StackExchange gives a good idea to start from:
+\begin{center}
+  \texttt{https://stackoverflow.com/a/70837025/1305099}
+\end{center}
+However, we should update the \texttt{binfmt} image used.
+That image moved from Docker's own to that of LinuxKit.
+It's just to find the latest tag in the list of tags on their Docker Hub,
+\begin{center}
+  \texttt{https://hub.docker.com/r/linuxkit/binfmt/tags},
+\end{center}
+and then use that tag like this.
+<<set up the binfmt>>=
+docker run --rm --privileged \
+  linuxkit/binfmt:ecd24b710cad869af6a4716809f62d7164286367
+@
 
-.INTERMEDIATE: grader.tex
-grader.pdf: grader.nw
-	${NOWEAVE.pdf}
+Now, to be able to use the other binary formats when building, we must create a 
+builder that uses them.
+<<add multiplatform builder>>=
+docker buildx create --use --name multiplatform-builder
+@
 
-<<targets for docker image>>
+Finally, we use [[buildx]] to build the image.
+We should specify the two platforms that we're interested in.
+<<run docker to build the image>>=
+docker buildx build --load --platform linux/amd64,linux/arm64 -t $@ .
+@
 
-.PHONY: clean
-clean:
-	${RM} grader.tex grader.mk
-	${RM} grader.aux
-	${RM} grader.fdb_latexmk
-	${RM} grader.fls
-	${RM} grader.log
-	${RM} grader.pdf
-
-INCLUDE_MAKEFILES=./makefiles
-include ${INCLUDE_MAKEFILES}/noweb.mk
+This mean that if we want to clean these images, we need to do the following.
+<<clean docker images>>=
+-docker image rm -f ${IMAGE_TARGET}
 @
 
 
@@ -293,8 +428,17 @@ pull instead of building a new image on their own.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
 publish: ${IMAGE_TARGET}
-	docker tag ${IMAGE_TARGET}:latest dbosk/grader:latest
-	docker push dbosk/grader:latest
+	docker tag ${IMAGE_TARGET} ${IMAGE_TARGET}:${IMAGE_TAG}
+	docker tag ${IMAGE_TARGET} ${IMAGE_TARGET}:latest
+	docker push ${IMAGE_TARGET}:latest ${IMAGE_TARGET}:${IMAGE_TAG}
+@
+
+To clean, we should remove those tags as well.
+We should also remove any dangling layers from the cache.
+<<clean docker images>>=
+-docker image rm -f ${IMAGE_TARGET}:${IMAGE_TAG}
+-docker image rm -f ${IMAGE_TARGET}:latest
+docker system prune
 @
 
 
