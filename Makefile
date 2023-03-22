@@ -35,7 +35,7 @@ clean-docker:
 	${RM} Dockerfile
 
 IMAGE_TARGET=   dbosk/grader
-IMAGE_TAG=      $(shell date +%Y%m%d-%H%m)
+IMAGE_TAG=      $(shell date +%Y%m%d-%H%M)
 
 .PHONY: all
 all: ${IMAGE_TARGET}
@@ -53,10 +53,11 @@ distclean-docker:
 	docker system prune
 
 .PHONY: publish
-publish: ${IMAGE_TARGET}
+publish:
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
 	  -t ${IMAGE_TARGET}:${IMAGE_TAG} .
-	docker tag ${IMAGE_TARGET}:${IMAGE_TAG} ${IMAGE_TARGET}:latest
+	docker buildx build --push --platform linux/amd64,linux/arm64 \
+	  -t ${IMAGE_TARGET}:latest .
 config: ${HOME}/.ssh/config
 	${CP} $^ $@
 	${EDITOR} $@

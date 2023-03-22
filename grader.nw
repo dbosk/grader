@@ -326,7 +326,7 @@ This variable should be updated whenever we change the assignments, so that the
 grading procedure can vary between courses.
 <<targets for docker image>>=
 IMAGE_TARGET=   dbosk/grader
-IMAGE_TAG=      $(shell date +%Y%m%d-%H%m)
+IMAGE_TAG=      $(shell date +%Y%m%d-%H%M)
 
 .PHONY: all
 all: ${IMAGE_TARGET}
@@ -446,12 +446,17 @@ We should also specify the two platforms that we're interested in, we do this
 using [[--platform]].
 
 Finally, we want to also update the [[latest]] tag.
+We do this by issuing another identical build, but with the [[latest]] tag 
+instead.
+This will use the cached versions from the first build, so we won't redo any 
+building.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
-publish: ${IMAGE_TARGET}
+publish:
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
 	  -t ${IMAGE_TARGET}:${IMAGE_TAG} .
-	docker tag ${IMAGE_TARGET}:${IMAGE_TAG} ${IMAGE_TARGET}:latest
+	docker buildx build --push --platform linux/amd64,linux/arm64 \
+	  -t ${IMAGE_TARGET}:latest .
 @
 
 To clean, we should remove those tags as well.
