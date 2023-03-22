@@ -46,6 +46,9 @@ distclean:
 
 INCLUDE_MAKEFILES=./makefiles
 include ${INCLUDE_MAKEFILES}/noweb.mk
+
+Makefile: grader.nw
+	${NOTANGLE.mk}
 @
 
 
