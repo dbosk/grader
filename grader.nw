@@ -414,28 +414,44 @@ docker buildx create --use --name multiplatform-builder
 @
 
 Finally, we use [[buildx]] to build the image.
-We should specify the two platforms that we're interested in.
+Now, this is a bit special.
+Unlike the normal build, buildx doesn't create a usable image that can be found 
+by [[docker image ls]].
+A multi-platform image must be pushed when created, so we defer building it to 
+§ \ref{PushImage}.
+Instead, we build a locally usable image here.
+This way, we can build an image quickly, test it and then go for the 
+multi-platform build when it's time to push it.
 <<run docker to build the image>>=
-docker buildx build --load --platform linux/amd64,linux/arm64 -t $@ .
+docker build -t $@ .
 @
 
-This mean that if we want to clean these images, we need to do the following.
+If we want to clean this image, we need to do the following.
 <<clean docker images>>=
 -docker image rm -f ${IMAGE_TARGET}
 @
 
 
-\section{Push image to Docker Hub}
+\section{Push image to Docker Hub}\label{PushImage}
 
 We want to publish a ready-made image on Docker Hub to make updates easier.
 This way, once a new image is pushed, all systems using it would just need to 
 pull instead of building a new image on their own.
+
+As mentioned above, we want to build and push in one step to achieve a 
+multi-platform image.
+To do this we add [[--push]] to the [[buildx build]].
+
+We should also specify the two platforms that we're interested in, we do this 
+using [[--platform]].
+
+Finally, we want to also update the [[latest]] tag.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
 publish: ${IMAGE_TARGET}
-	docker tag ${IMAGE_TARGET} ${IMAGE_TARGET}:${IMAGE_TAG}
-	docker tag ${IMAGE_TARGET} ${IMAGE_TARGET}:latest
-	docker push ${IMAGE_TARGET}:latest ${IMAGE_TARGET}:${IMAGE_TAG}
+	docker buildx build --push --platform linux/amd64,linux/arm64 \
+	  -t ${IMAGE_TARGET}:${IMAGE_TAG} .
+	docker tag ${IMAGE_TARGET}:${IMAGE_TAG} ${IMAGE_TARGET}:latest
 @
 
 To clean, we should remove those tags as well.
