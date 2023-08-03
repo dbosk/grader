@@ -477,17 +477,18 @@ docker system prune
 We need the [[canvaslms]] command inside the container since the scripts rely 
 heavily on this.
 So we install it using [[pip]].
-Now, since it depends on the [[cryptography]] package, we need to install the 
-dependencies\footnote{%
-  See \texttt{https://stackoverflow.com/a/53562393/1305099}.
-}.
 We also want to install the [[ladok]] command to report whenever we have any 
 passing results.
+However, to ensure both ends up with the latest version, we install them 
+separately.
+Otherwise, [[pip]] might hold a version back due to incompatible dependencies 
+(although both should have compatible dependencies).
 <<set up canvaslms and ladok3 in container>>=
 RUN apt-get update && \
   apt-get install -y \
     python3-pip && \
-  python3 -m pip install --no-cache-dir canvaslms ladok3 && \
+  python3 -m pip install --no-cache-dir ladok3 && \
+  python3 -m pip install --no-cache-dir canvaslms && \
   apt-get autoremove -y
 @
 
