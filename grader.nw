@@ -450,9 +450,13 @@ We do this by issuing another identical build, but with the [[latest]] tag
 instead.
 This will use the cached versions from the first build, so we won't redo any 
 building.
+
+We add the [[${IMAGE_TARGET}]] as a dependency to the [[publish]] target to get 
+all the prerequisites easily built.
+That way, we don't have to restate them here.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
-publish:
+publish: ${IMAGE_TARGET}
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
 	  -t ${IMAGE_TARGET}:${IMAGE_TAG} .
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
