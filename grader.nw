@@ -31,6 +31,8 @@ We use the makefiles framework\footnote{%
 }.
 This means that we get many extra default pattern rules.
 <<Makefile>>=
+<<variables>>
+
 .PHONY: all
 all: grader.pdf
 
@@ -423,7 +425,13 @@ Instead, we build a locally usable image here.
 This way, we can build an image quickly, test it and then go for the 
 multi-platform build when it's time to push it.
 <<run docker to build the image>>=
-docker build -t $@ .
+docker build ${DOCKER_BUILD_OPTS} -t $@ .
+@
+
+We'll default using the [[--no-cache]] since we want to rebuild whenever a 
+package has changed, e.g.~[[ladok3]].
+<<variables>>=
+DOCKER_BUILD_OPTS=--no-cache
 @
 
 If we want to clean this image, we need to do the following.
@@ -457,10 +465,16 @@ That way, we don't have to restate them here.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
 publish: ${IMAGE_TARGET}
+  docker buildx build ${DOCKER_BUILDX_OPTS} --push \
+    --platform linux/amd64,linux/arm64 \
+		-t ${IMAGE_TARGET}:${IMAGE_TAG} .
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
-	  -t ${IMAGE_TARGET}:${IMAGE_TAG} .
-	docker buildx build --push --platform linux/amd64,linux/arm64 \
-	  -t ${IMAGE_TARGET}:latest .
+		-t ${IMAGE_TARGET}:latest .
+@
+
+Same as above, we want to build using [[--no-cache]].
+<<variables>>=
+DOCKER_BUILDX_OPTS=--no-cache
 @
 
 To clean, we should remove those tags as well.

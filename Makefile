@@ -1,3 +1,5 @@
+DOCKER_BUILD_OPTS=--no-cache
+
 .PHONY: all
 all: grader.pdf
 
@@ -42,7 +44,7 @@ all: ${IMAGE_TARGET}
 
 .PHONY: ${IMAGE_TARGET}
 ${IMAGE_TARGET}: Dockerfile
-	docker build -t $@ .
+	docker build ${DOCKER_BUILD_OPTS} -t $@ .
 
 .PHONY: distclean distclean-docker
 distclean: distclean-docker
@@ -54,10 +56,10 @@ distclean-docker:
 
 .PHONY: publish
 publish: ${IMAGE_TARGET}
+	docker buildx build --no-cache --push --platform linux/amd64,linux/arm64 \
+		-t ${IMAGE_TARGET}:${IMAGE_TAG} .
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
-	  -t ${IMAGE_TARGET}:${IMAGE_TAG} .
-	docker buildx build --push --platform linux/amd64,linux/arm64 \
-	  -t ${IMAGE_TARGET}:latest .
+		-t ${IMAGE_TARGET}:latest .
 config: ${HOME}/.ssh/config
 	${CP} $^ $@
 	${EDITOR} $@
