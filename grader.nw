@@ -465,8 +465,8 @@ That way, we don't have to restate them here.
 <<publish target to push image to Docker Hub>>=
 .PHONY: publish
 publish: ${IMAGE_TARGET}
-  docker buildx build ${DOCKER_BUILDX_OPTS} --push \
-    --platform linux/amd64,linux/arm64 \
+	docker buildx build ${DOCKER_BUILDX_OPTS} --push \
+	  --platform linux/amd64,linux/arm64 \
 		-t ${IMAGE_TARGET}:${IMAGE_TAG} .
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
 		-t ${IMAGE_TARGET}:latest .

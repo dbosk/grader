@@ -1,4 +1,5 @@
 DOCKER_BUILD_OPTS=--no-cache
+DOCKER_BUILDX_OPTS=--no-cache
 
 .PHONY: all
 all: grader.pdf
@@ -56,7 +57,8 @@ distclean-docker:
 
 .PHONY: publish
 publish: ${IMAGE_TARGET}
-	docker buildx build --no-cache --push --platform linux/amd64,linux/arm64 \
+	docker buildx build ${DOCKER_BUILDX_OPTS} --push \
+	  --platform linux/amd64,linux/arm64 \
 		-t ${IMAGE_TARGET}:${IMAGE_TAG} .
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
 		-t ${IMAGE_TARGET}:latest .
