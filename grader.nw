@@ -510,7 +510,7 @@ RUN apt-get update && \
 
 To be able to use them, we need to add [[.local/bin]] to the [[PATH]].
 <<set up canvaslms and ladok3 in container>>=
-ENV PATH "$PATH:/root/.local/bin"
+ENV PATH="$PATH:/root/.local/bin"
 @
 
 
@@ -528,7 +528,7 @@ The RepoBee installer checks for [[repobee]] being on the [[PATH]] and asks us
 if we want to add it if it's not already there.
 This, of course, breaks the image creation.
 <<set up repobee in container>>=
-ENV PATH "$PATH:/root/.repobee/bin"
+ENV PATH="$PATH:/root/.repobee/bin"
 RUN apt-get update && apt-get install -y curl git python3-venv && \
   curl -s https://repobee.org/install.sh > repobee-install.sh && \
   bash repobee-install.sh && rm repobee-install.sh
