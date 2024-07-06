@@ -504,7 +504,8 @@ conflicting dependencies.
 RUN apt-get update && \
   apt-get install -y \
     pipx && \
-  pipx install canvaslms ladok3 && \
+  pipx install canvaslms && \
+  pipx install ladok3 && \
   apt-get autoremove -y
 @
 
