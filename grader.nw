@@ -302,7 +302,7 @@ Then we install the depends and grading scripts and run them all by default.
 FROM ubuntu
 
 USER root
-WORKDIR grader
+WORKDIR /grader
 
 <<set up canvaslms and ladok3 in container>>
 <<set up repobee in container>>
