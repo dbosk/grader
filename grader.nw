@@ -508,6 +508,11 @@ RUN apt-get update && \
   apt-get autoremove -y
 @
 
+To be able to use them, we need to add [[.local/bin]] to the [[PATH]].
+<<set up canvaslms and ladok3 in container>>=
+ENV PATH "$PATH:/root/.local/bin"
+@
+
 
 \section{Set up \texttt{repobee}}
 
