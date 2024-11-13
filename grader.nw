@@ -259,10 +259,14 @@ for script in ${scripts}; do
 done
 @
 
-Worth noting here that we use [[$(pwd)]] instead of [[.]].
+Now it's time to execute the script in the container using [[docker run]].
+We'll need to give the container access to the current working directory.
+Worth noting here is that we use [[$(pwd)]] instead of [[.]] for the [[-v]] 
+option.
 This is because Docker requires at least two characters, so we give the 
 absolute path instead of the relative one.
 <<run script in grader container>>=
+<<load all credentials>>
 docker run \
   -e KRB_USER -e KRB_PASS \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
@@ -272,6 +276,14 @@ docker run \
   -v /afs:/afs \
   -v "$(pwd)":/grader \
     ${GRADER_DH_REPO}:latest /bin/bash "${script}"
+@
+
+We need all those credentials.
+We can load them from a file, say [[credentials]].
+<<load all credentials>>=
+source ${CREDENTIALS}
+<<config variables>>=
+CREDENTIALS="${HOME}/.credentials"
 @
 
 
