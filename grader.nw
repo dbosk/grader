@@ -117,16 +117,14 @@ Say we want to run the following script:
 <<ladok.sh>>=
 #!/bin/bash
 
-source /grader/credentials
-
-courses="(prg[mi]|datintro)2[1-9]"
+courses="((prgi|datintro)[2-9][0-9]|prgm(2[1-9]|[3-9][0-9]))"
 components="(LAB[13]|MAT1|KAL1)"
 
 canvaslms results -c "$courses" -A "$components" | \
   sed -E "s/ ?[HV]T[0-9]{2}( \(.*\))?//" | \
   ladok report -fv
 
-datorprov_courses="(prg[mi])2[2-9]"
+datorprov_courses="(prgi[2-9][0-9]|prgm(2[2-9]|[3-9][0-9]))"
 
 canvaslms results -c "$datorprov_courses" -A "LAB2" \
   -S canvaslms.grades.maxgradesurvey | \
@@ -134,8 +132,8 @@ canvaslms results -c "$datorprov_courses" -A "LAB2" \
     ladok report -fv
 @
 
-For option \ref{ExtDir}, we could put [[<<ladok.sh>>]] and [[credentials]] in a 
-directory, say [[~/ladok]].
+For option \ref{ExtDir}, we could put [[<<ladok.sh>>]] in a directory, say 
+[[~/ladok]].
 Then we mount that directory in the container when we run it, and run the 
 script in that mounted directory.
 \begin{verbatim}
@@ -157,10 +155,11 @@ The essential difference is the root image used:
 <<Dockerfile.ladok>>=
 FROM dbosk/grader
 
-COPY ladok.sh credentials /grader
+COPY ladok.sh /grader
 
 CMD ["/bin/bash", "/grader/ladok.sh"]
-@
+@ Then we must run this image with all those [[-e]] options given to
+[[docker run]] above.
 
 Finally, let's add the targets to the Makefile to build these.
 We need to specify these explicitly, since the pattern rules only match files 
