@@ -185,16 +185,16 @@ We want to write a short script, [[<<grader.sh>>]]\footnote{%
 }, that can be added to our cron tab.
 The idea is to have a directory full of scripts that can be executed by this 
 script.
+Or even subdirectories with executable scripts.
 <<grader.sh>>=
 #!/bin/bash
 
 <<config variables>>
+<<helper functions>>
 
 <<update the grader image>>
 
-<<change CWD to script directory>>
-<<find all executable scripts>>
-<<run each script in the grader container>>
+<<find and run all executable scripts>>
 @
 
 Let's also add the building targets.
@@ -212,23 +212,40 @@ Now, the Docker image provided here, is also available on Docker Hub.
 We can simply pull a ready-made image.
 We let the user override the Docker Hub repo, in case they want to customized 
 their own image.
+We'll do the pull with the [[-q]] flag to make it quiet, we don't want 
+unnecessary output in the cron job.
 <<update the grader image>>=
-docker pull ${GRADER_DH_REPO}:latest
+docker pull -q ${GRADER_DH_REPO}:latest
 <<config variables>>=
 GRADER_DH_REPO="dbosk/grader"
+@
+
+Now we want to run every script in all the subdirectories.
+<<find and run all executable scripts>>=
+for dir in $(find ${SCRIPT_DIR} -type d); do
+  run_grader ${dir}
+done
+<<config variables>>=
+SCRIPT_DIR="${HOME}/grader"
+<<helper functions>>=
+run_grader() {
+  dir=${1}
+  <<change CWD to script directory>>
+  <<find all executable scripts>>
+  <<run each script in the grader container>>
+}
 @
 
 We change the working directory to the script directory, this way we don't need 
 to take that into consideration in the remaining code.
 <<change CWD to script directory>>=
-cd ${SCRIPT_DIR}
-<<config variables>>=
-SCRIPT_DIR="."
+cd ${dir}
+echo "Running scripts in ${dir}:"
 @
 
 Now, we will run all scripts that have the executable bit set.
 All other files are ignored.
-We also ignore files in any subdirectories.
+We also ignore files in any subdirectories (they'll be executed later).
 (Note that this should be [[-maxdepth 1]] and it should come before any other 
 arguments.)
 This way we can have include files without the executable bit set.
@@ -236,7 +253,7 @@ This way we can have include files without the executable bit set.
 scripts=$(find . -maxdepth 1 -type f -executable)
 <<run each script in the grader container>>=
 for script in ${scripts}; do
-  echo ${script}:
+  echo "---- ${script}:"
   <<run script in grader container>>
   echo
 done
