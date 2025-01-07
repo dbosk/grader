@@ -1,3 +1,6 @@
+\tableofcontents
+\clearpage
+
 \section{Introduction}
 
 We want to set up a Docker container to run all grading and reporting in it.
