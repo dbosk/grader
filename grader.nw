@@ -188,6 +188,33 @@ We want to write a short script, [[<<grader.sh>>]]\footnote{%
 The idea is to have a directory full of scripts that can be executed by this 
 script.
 Or even subdirectories with executable scripts.
+My [[grader]] directory looks like this:
+\begin{verbatim}
+grader
++-- credentials
++-- datintro.sh
++-- datintro23
+|   +-- gits-setup.sh
+|   +-- grade-git.sh
+|   +-- grade-latex.sh
+|   +-- grade-ssh.sh
+|   +-- grade-terminal.sh
++-- grader.sh
++-- prgx.sh
++-- tilkry
+|   +-- INL1.sh
+|   +-- LAB1.sh
++-- vetcyb.sh
+\end{verbatim}
+The cronjob runs [[grader/grader.sh]] which uses the [[credentials]] to load 
+the necessary credentials.
+Then it runs all scripts in the directory and all subdirectories.
+Each of those files, for instance [[datintro.sh]] and [[tilkry/INL1.sh]], 
+should be executable and looks like [[<<ladok.sh>>]] in Section 
+\ref{DetailedUsage}.
+The file [[<<ladok.sh>>]] is in fact a copy of [[grader/prgx.sh]].
+
+The script looks like this:
 <<grader.sh>>=
 #!/bin/bash
 
