@@ -1,3 +1,4 @@
+NOWEAVEFLAGS=-option "shift,breakcode,longxref,longchunks"
 DOCKER_BUILD_OPTS=--no-cache
 DOCKER_BUILDX_OPTS=--no-cache
 

@@ -56,6 +56,11 @@ Makefile: grader.nw
 	${NOTANGLE.mk}
 @
 
+We want to pass some options to [[noweave]] to change the typesetting.
+<<variables>>=
+NOWEAVEFLAGS=-option "shift,breakcode,longxref,longchunks"
+@
+
 
 \section{Basic usage}\label{BasicUsage}
 
