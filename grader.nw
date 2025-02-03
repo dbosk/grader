@@ -567,15 +567,17 @@ We need Cargo to install it.
 apt-get install -y cargo \
 && cargo install smartcat
 @ Then we need a working configuration file for it.
-We need the config files:
+We need the config files from [[${HOME}/.config/smartcat]]:
 \begin{verbatim}
 .api_configs.toml
 prompts.toml
 \end{verbatim}
 <<build targets for files for image>>=
 .api_configs.toml prompts.toml: ${HOME}/.config/smartcat/%
-	${CP} $< .
+	${CP} $^ .
 	${EDITOR} $@
+<<add config for [[sc]]>>=
+COPY .api_configs.toml prompts.toml /root/.config/smartcat/
 @
 
 
