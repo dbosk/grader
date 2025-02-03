@@ -362,7 +362,7 @@ FROM ubuntu
 USER root
 WORKDIR /grader
 
-<<add [[bc]] in container>>
+<<add [[bc]] and [[sc]] in container>>
 <<set up [[canvaslms]] and [[ladok3]] in container>>
 <<set up [[repobee]] in container>>
 <<set up SSH in container>>
@@ -545,12 +545,39 @@ docker system prune
 @
 
 
-\section{Set up \texttt{bc} in container}
+\section{Add \texttt{bc} and \texttt{sc} in container}
 
-We need to have the [[bc]] command in the container.
-<<add [[bc]] in container>>=
-RUN apt-get update && apt-get install -y bc
+We need to have the [[bc]] and [[sc]] commands in the container.
+<<add [[bc]] and [[sc]] in container>>=
+RUN apt-get update \
+    && <<install [[bc]]>> \
+    && <<install [[sc]]>>
+
+<<add config for [[sc]]>>
 @
+
+Now, [[bc]] is simple to install:
+<<install [[bc]]>>=
+apt-get install -y bc
+@
+
+[[sc]] is a bit more tricky.
+We need Cargo to install it.
+<<install [[sc]]>>=
+apt-get install -y cargo \
+&& cargo install smartcat
+@ Then we need a working configuration file for it.
+We need the config files:
+\begin{verbatim}
+.api_configs.toml
+prompts.toml
+\end{verbatim}
+<<build targets for files for image>>=
+.api_configs.toml prompts.toml: ${HOME}/.config/smartcat/%
+	${CP} $< .
+	${EDITOR} $@
+@
+
 
 \section{Set up \texttt{canvaslms} and \texttt{ladok3}}
 
