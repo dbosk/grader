@@ -595,11 +595,12 @@ We must now use [[pipx]] to install Python packages.
 This way each gets a separate environment.
 This allows us to install the latest version of each package, even if they have 
 conflicting dependencies.
+Finally, we also note that [[canvaslms]] requires [[pandoc]] to be installed.
 <<set up [[canvaslms]] and [[ladok3]] in container>>=
-RUN apt-get install -y pipx && \
-  pipx install canvaslms && \
-  pipx install ladok3 && \
-  apt-get autoremove -y
+RUN apt-get install -y pipx \
+  && pipx install canvaslms && apt-get install -y pandoc \
+  && pipx install ladok3 \
+  && apt-get autoremove -y
 @
 
 To be able to use them, we need to add [[.local/bin]] to the [[PATH]].
