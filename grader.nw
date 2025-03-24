@@ -76,9 +76,8 @@ See the RepoBee documentation for details:
 \begin{center}
 \texttt{https://docs.repobee.org/en/stable/getting\textunderscore{}started.html}.
 \end{center}
-\item [[COURSE_CODE]] containing a space-separated list of regular expressions 
-for the course code, [[COURSE_CODE_ORG]] containing a space-separated list of 
-  course code and GitHub organization name pairs.
+\item [[OPENAI_API_KEY]] is the API key to access the OpenAI API.
+This is needed for smartcat ([[sc]]) to work.
 \end{itemize}
 We also must mount the AFS root (/afs) in the container (to access 
 /afs/kth.se).
@@ -93,7 +92,7 @@ docker run \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
   -e LADOK_USER -e LADOK_PASS \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
-  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -e OPENAI_API_KEY \
   -v /afs:/afs \
   -it \
     dbosk/grader:latest
@@ -145,7 +144,7 @@ docker run \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
   -e LADOK_USER -e LADOK_PASS \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
-  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -e OPENAI_API_KEY \
   -v /afs:/afs \
   -v ~/ladok:/grader \
     dbosk/grader:latest /bin/bash /grader/ladok.sh
@@ -301,7 +300,7 @@ docker run \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
   -e LADOK_USER -e LADOK_PASS \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
-  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -e OPENAI_API_KEY \
   -v /afs:/afs \
   -v "$(pwd)":/grader \
     ${GRADER_DH_REPO}:latest /bin/bash "${script}"
@@ -362,7 +361,7 @@ FROM ubuntu
 USER root
 WORKDIR /grader
 
-<<add [[bc]] in container>>
+<<add [[bc]] and [[sc]] in container>>
 <<set up [[canvaslms]] and [[ladok3]] in container>>
 <<set up [[repobee]] in container>>
 <<set up SSH in container>>
@@ -545,12 +544,61 @@ docker system prune
 @
 
 
-\section{Set up \texttt{bc} in container}
+\section{Add \texttt{bc} and \texttt{sc} in container}
 
-We need to have the [[bc]] command in the container.
-<<add [[bc]] in container>>=
-RUN apt-get update && apt-get install -y bc
+We need to have the [[bc]] and [[sc]] commands in the container.
+<<add [[bc]] and [[sc]] in container>>=
+ENV PATH="$PATH:/root/.cargo/bin"
+RUN apt-get update \
+    && <<install [[bc]]>> \
+    && <<install [[sc]]>>
+
+<<add config for [[sc]]>>
 @
+
+Now, [[bc]] is simple to install:
+<<install [[bc]]>>=
+apt-get install -y bc
+@
+
+[[sc]] is a bit more tricky.
+We need Cargo to install it.
+We want to install a newer version of Rust than what is available in the Ubuntu 
+image.
+This is due to the newer version of Smartcat has a dependency that requires a 
+newer version of Rust than what is available in the Ubuntu image.
+We also seem to need [[pkg-config]] to build it, something for OpenSSL.
+And now that we install Rust manually, we must also install the 
+[[build-essential]] package to get the [[cc]] command (among others).
+<<install [[sc]]>>=
+apt-get install -y pkg-config curl build-essential \
+&& curl https://sh.rustup.rs -sSf -o rustinst.sh \
+&& sh rustinst.sh -y \
+&& cargo install smartcat
+@ Then we need a working configuration file for it.
+We need the config files from [[${HOME}/.config/smartcat]]:
+\begin{verbatim}
+.api_configs.toml
+prompts.toml
+\end{verbatim}
+<<build targets for files for image>>=
+ .api_configs.toml: ${HOME}/.config/smartcat/.api_configs.toml
+ prompts.toml: ${HOME}/.config/smartcat/prompts.toml
+
+.api_configs.toml prompts.toml:
+	${CP} $^ .
+	${EDITOR} $@
+
+.PHONY: clean-smartcat
+clean: clean-smartcat
+clean-smartcat:
+	${RM} .api_configs.toml prompts.toml
+
+${IMAGE_TARGET}: .api_configs.toml prompts.toml
+<<add config for [[sc]]>>=
+COPY .api_configs.toml prompts.toml /root/.config/smartcat/
+@
+
 
 \section{Set up \texttt{canvaslms} and \texttt{ladok3}}
 
@@ -566,11 +614,12 @@ We must now use [[pipx]] to install Python packages.
 This way each gets a separate environment.
 This allows us to install the latest version of each package, even if they have 
 conflicting dependencies.
+Finally, we also note that [[canvaslms]] requires [[pandoc]] to be installed.
 <<set up [[canvaslms]] and [[ladok3]] in container>>=
-RUN apt-get install -y pipx && \
-  pipx install canvaslms && \
-  pipx install ladok3 && \
-  apt-get autoremove -y
+RUN apt-get install -y pipx \
+  && pipx install canvaslms && apt-get install -y pandoc \
+  && pipx install ladok3 \
+  && apt-get autoremove -y
 @
 
 To be able to use them, we need to add [[.local/bin]] to the [[PATH]].
