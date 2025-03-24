@@ -5,6 +5,9 @@ grader.pdf
 grader.tex
 ltxobj/
 grader.sh
+.api_configs.toml
+prompts.toml
+smartcat/
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

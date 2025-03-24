@@ -573,9 +573,19 @@ We need the config files from [[${HOME}/.config/smartcat]]:
 prompts.toml
 \end{verbatim}
 <<build targets for files for image>>=
-.api_configs.toml prompts.toml: ${HOME}/.config/smartcat/%
+ .api_configs.toml: ${HOME}/.config/smartcat/.api_configs.toml
+ prompts.toml: ${HOME}/.config/smartcat/prompts.toml
+
+.api_configs.toml prompts.toml:
 	${CP} $^ .
 	${EDITOR} $@
+
+.PHONY: clean-smartcat
+clean: clean-smartcat
+clean-smartcat:
+	${RM} .api_configs.toml prompts.toml
+
+${IMAGE_TARGET}: .api_configs.toml prompts.toml
 <<add config for [[sc]]>>=
 COPY .api_configs.toml prompts.toml /root/.config/smartcat/
 @

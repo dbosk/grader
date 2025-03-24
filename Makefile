@@ -62,6 +62,19 @@ publish: ${IMAGE_TARGET}
 		-t ${IMAGE_TARGET}:${IMAGE_TAG} .
 	docker buildx build --push --platform linux/amd64,linux/arm64 \
 		-t ${IMAGE_TARGET}:latest .
+ .api_configs.toml: ${HOME}/.config/smartcat/.api_configs.toml
+ prompts.toml: ${HOME}/.config/smartcat/prompts.toml
+
+.api_configs.toml prompts.toml:
+	${CP} $^ .
+	${EDITOR} $@
+
+.PHONY: clean-smartcat
+clean: clean-smartcat
+clean-smartcat:
+	${RM} .api_configs.toml prompts.toml
+
+${IMAGE_TARGET}: .api_configs.toml prompts.toml
 config: ${HOME}/.ssh/config
 	${CP} $^ $@
 	${EDITOR} $@
