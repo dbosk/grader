@@ -548,6 +548,7 @@ docker system prune
 
 We need to have the [[bc]] and [[sc]] commands in the container.
 <<add [[bc]] and [[sc]] in container>>=
+ENV PATH="$PATH:/root/.cargo/bin"
 RUN apt-get update \
     && <<install [[bc]]>> \
     && <<install [[sc]]>>
@@ -562,8 +563,17 @@ apt-get install -y bc
 
 [[sc]] is a bit more tricky.
 We need Cargo to install it.
+We want to install a newer version of Rust than what is available in the Ubuntu 
+image.
+This is due to the newer version of Smartcat has a dependency that requires a 
+newer version of Rust than what is available in the Ubuntu image.
+We also seem to need [[pkg-config]] to build it, something for OpenSSL.
+And now that we install Rust manually, we must also install the 
+[[build-essential]] package to get the [[cc]] command (among others).
 <<install [[sc]]>>=
-apt-get install -y cargo \
+apt-get install -y pkg-config curl build-essential \
+&& curl https://sh.rustup.rs -sSf -o rustinst.sh \
+&& sh rustinst.sh -y \
 && cargo install smartcat
 @ Then we need a working configuration file for it.
 We need the config files from [[${HOME}/.config/smartcat]]:
