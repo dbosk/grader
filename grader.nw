@@ -76,9 +76,8 @@ See the RepoBee documentation for details:
 \begin{center}
 \texttt{https://docs.repobee.org/en/stable/getting\textunderscore{}started.html}.
 \end{center}
-\item [[COURSE_CODE]] containing a space-separated list of regular expressions 
-for the course code, [[COURSE_CODE_ORG]] containing a space-separated list of 
-  course code and GitHub organization name pairs.
+\item [[OPENAI_API_KEY]] is the API key to access the OpenAI API.
+This is needed for smartcat ([[sc]]) to work.
 \end{itemize}
 We also must mount the AFS root (/afs) in the container (to access 
 /afs/kth.se).
@@ -93,7 +92,7 @@ docker run \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
   -e LADOK_USER -e LADOK_PASS \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
-  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -e OPENAI_API_KEY \
   -v /afs:/afs \
   -it \
     dbosk/grader:latest
@@ -145,7 +144,7 @@ docker run \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
   -e LADOK_USER -e LADOK_PASS \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
-  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -e OPENAI_API_KEY \
   -v /afs:/afs \
   -v ~/ladok:/grader \
     dbosk/grader:latest /bin/bash /grader/ladok.sh
@@ -301,7 +300,7 @@ docker run \
   -e CANVAS_SERVER -e CANVAS_TOKEN \
   -e LADOK_USER -e LADOK_PASS \
   -e REPBEE_USER -e REPOBEE_URL -e REPOBEE_TOKEN \
-  -e COURSE_CODE -e COURSE_CODE_ORG \
+  -e OPENAI_API_KEY \
   -v /afs:/afs \
   -v "$(pwd)":/grader \
     ${GRADER_DH_REPO}:latest /bin/bash "${script}"
