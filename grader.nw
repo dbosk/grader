@@ -574,7 +574,7 @@ And now that we install Rust manually, we must also install the
 apt-get install -y pkg-config curl build-essential \
 && curl https://sh.rustup.rs -sSf -o rustinst.sh \
 && sh rustinst.sh -y \
-&& cargo install smartcat
+&& cargo install smartcat \
 @ Then we need a working configuration file for it.
 We need the config files from [[${HOME}/.config/smartcat]]:
 \begin{verbatim}
@@ -597,6 +597,12 @@ clean-smartcat:
 ${IMAGE_TARGET}: .api_configs.toml prompts.toml
 <<add config for [[sc]]>>=
 COPY .api_configs.toml prompts.toml /root/.config/smartcat/
+@
+
+Finally, we also want [[pdf2txt]] to be able to convert PDF files to text for 
+use with [[sc]].
+<<install [[sc]]>>=
+&& apt-get install -y python3-pdfminer
 @
 
 
