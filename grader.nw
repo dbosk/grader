@@ -578,12 +578,31 @@ RUN apt-get update \
   && pipx install canvaslms && apt-get install -y pandoc \
   && pipx install ladok3 \
   && pipx install llm && apt-get install -y python3-pdfminer \
+  && <<install plugins for llm>> \
   && apt-get autoremove -y
 @
 
 To be able to use them, we need to add [[.local/bin]] to the [[PATH]].
 <<set up [[canvaslms]], [[ladok3]] and [[llm]] in container>>=
 ENV PATH="$PATH:/root/.local/bin"
+@
+
+
+\section{Plugins for \texttt{llm}}
+
+We also want some plugins for [[llm]].
+Particularly for basic normal use:
+more models, more data sources and more tools.
+<<install plugins for llm>>=
+llm install llm-openai-plugin \
+            llm-templates-github \
+            llm-fragments-github \
+            llm-fragments-pdf \
+            llm-tools-sqlite \
+            llm-azure \
+            llm-anthropic \
+            llm-tools-simpleeval \
+            llm-gemini
 @
 
 
