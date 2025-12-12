@@ -574,11 +574,12 @@ We also want [[pdf2txt]] from the [[python3-pdfminer]] package to be able to
 extract text from PDF files for use with [[llm]].
 <<set up [[canvaslms]], [[ladok3]] and [[llm]] in container>>=
 RUN apt-get update \
-  && apt-get install -y pipx \
+  && apt-get install -y pipx build-essential \
   && pipx install canvaslms && apt-get install -y pandoc \
   && pipx install ladok3 \
   && pipx install llm && apt-get install -y python3-pdfminer \
   && <<install plugins for llm>> \
+  && apt-get uninstall -y build-essential \
   && apt-get autoremove -y
 @
 
@@ -594,15 +595,15 @@ We also want some plugins for [[llm]].
 Particularly for basic normal use:
 more models, more data sources and more tools.
 <<install plugins for llm>>=
-llm install llm-openai-plugin \
-            llm-templates-github \
-            llm-fragments-github \
-            llm-fragments-pdf \
-            llm-tools-sqlite \
-            llm-azure \
-            llm-anthropic \
-            llm-tools-simpleeval \
-            llm-gemini
+${HOME}/.local/bin/llm install llm-openai-plugin \
+                               llm-templates-github \
+                               llm-fragments-github \
+                               llm-fragments-pdf \
+                               llm-tools-sqlite \
+                               llm-azure \
+                               llm-anthropic \
+                               llm-tools-simpleeval \
+                               llm-gemini
 @
 
 
