@@ -579,7 +579,7 @@ RUN apt-get update \
   && pipx install ladok3 \
   && pipx install llm && apt-get install -y python3-pdfminer \
   && <<install plugins for llm>> \
-  && apt-get uninstall -y build-essential \
+  && apt-get remove -y build-essential \
   && apt-get autoremove -y
 @
 
